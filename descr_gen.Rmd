@@ -1,0 +1,131 @@
+---
+title: "General Descriptive Report"
+author: "Benjamin T. Carter, PhD"
+date: "Generated: `r Sys.time()`"
+output:
+  powerpoint_presentation:
+    df_print: "kable"
+    slide_level: 2
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(message=FALSE, error=FALSE, warning=FALSE, echo = FALSE)
+
+# load libraries
+list.of.packages <- c("compareGroups", "tidyverse")
+# compare the list to the installed packages list and add missing packages to new list
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+# install missing packages
+if(length(new.packages)) install.packages(new.packages, dependencies = TRUE)
+meh <- lapply(list.of.packages,library,character.only = TRUE)
+rm(meh)
+```
+
+# Table 1
+
+```{r}
+t1_vars <- df.var.names[df.var.names$Variable %in% ar.demographics,]
+
+df_t1 <- df[t1_vars$Variable]
+
+Hmisc::label(df_t1) <- as.list(t1_vars$Label)
+
+formula <- paste(t1_vars$Variable,
+                 collapse = " + ")
+
+formula <- paste("~", formula, sep = " ")
+
+
+# make table 1
+t1 <- compareGroups(formula, 
+                    data = df_t1, 
+                    max.xlev = 25)
+
+t1 <- createTable(t1,
+                  show.all = TRUE)
+
+export2md(t1)
+```
+
+# Missingness
+
+The following gives a brief overview of the completeness of the dataset and presumes every row in the dataset should not have any missing or incomplete information. Question 22 (q0022) was omitted from this assessment since it was an optional question. Questions that allowed for more than one response (e.g. a 'select all that apply' question) were counted as incomplete only if the respondent did not make a choice. Of note, most of missing data are found in the second half of the survey starting with question 8 (q0008). I am not familiar with how the survey was administered or programmed so this may have been intentional.
+
+```{r results='asis', fig.height=25, fig.width=10}
+
+reshape2::melt(df.bin, 
+               id.vars = "RespondentID") %>%
+  ggplot(
+    aes(x = variable,
+        y = RespondentID,
+        fill = value)
+  ) + 
+  geom_tile() + 
+  theme_classic() + 
+  guides(x = guide_axis(angle = 90)) +
+  labs(
+    title = "Completion heatmap",
+    x = "Survey question",
+    fill = "Was the question answered?"
+  )
+
+cat("\n")
+cat("\n")
+cat("This heatmap depicts which questions were answered or unanswered on the survey by each respondent. Vertices in red indicate a question that was unanswered by the respondent.")
+
+compl.data <- round(100*sum(as.matrix(df.bin %>%
+                                        select(-case.id)))/
+                      (dim(df.bin)[1]*dim(df.bin)[2]), 
+                    1)
+cat("\n")
+cat("\n")
+compl.data <- paste("Complete data: ", 
+                    compl.data,
+                    "%",
+                    sep="")
+cat(compl.data)
+cat("\n")
+
+ar_vars <- length(colnames(df.bin))-1
+
+ar_complete <- apply(df.bin %>% select(-case.id),
+      1,
+      function(x){
+        x <- sum(x)
+        return(x)
+      })
+
+ar_incomplete <- ar_complete/ar_vars<1
+
+per_incomplete <- paste("Percent respondents with incomplete data: ",
+                        round(100*
+                                sum(ar_incomplete)/
+                                length(ar_incomplete)),
+                        "%",
+                        sep = "")
+cat("\n")
+cat("\n")
+cat(per_incomplete)
+cat("\n")
+cat("\n")
+cat("The following RespondentIDs have incomplete data: ")
+cat("\n")
+cat(df.bin$RespondentID[ar_incomplete])
+
+```
+
+
+
+# Package Citations
+
+```{r citations}
+version
+citation()
+lapply(list.of.packages, citation)
+```
+
