@@ -57,6 +57,27 @@ df.var.values <- df.var.values %>%
     entry = `...2`
   )
 
+# get rid of pharms
+ar_temp <- is.na(df.raw$q0006_0006)
+df.raw <- df.raw[ar_temp,]
+
+# dichotomize to APs vs RNs
+df.raw <- df.raw %>% 
+  mutate(
+    AP = if_else(
+      !is.na(q0006_0002) |
+        !is.na(q0006_0003) |
+        !is.na(q0006_0004),
+      "AP",
+      "RN"
+    )
+  )
+
+df.var.names <- rbind(
+  df.var.names,
+  c("AP", 99, "Advanced Practice or RN?")
+)
+
 # CLEAN THE DF #################################################################
 # make ids strings
 df.raw$RespondentID <- as.character(df.raw$RespondentID)
