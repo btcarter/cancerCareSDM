@@ -119,6 +119,83 @@ cat(df.bin$RespondentID[ar_incomplete])
 
 ```
 
+# Early Stage vs Advanced Stage Patients
+
+```{r results = 'asis'}
+
+t1 <- startsWith(df.var.names$Variable, "q0007") +
+            startsWith(df.var.names$Variable, "q0008")
+
+t1 <- as.logical(t1)
+
+t1 <- df.var.names$Variable[t1]
+
+ar_stratify <- "AP"
+
+df.raw %>% 
+  select(
+    ar_stratify,
+    all_of(t1)
+  ) %>% 
+  pivot_longer(
+    cols = t1,
+    names_to = "q_nums",
+    values_to = "q_vals"
+  ) %>% 
+  left_join(
+    df.var.names[c("Variable", "Label")],
+    by = c("q_nums" = "Variable")
+  ) %>% 
+  mutate(
+    question = gsub("(.*) - .*",
+                    "\\1",
+                    Label),
+    Stage = gsub(".* - For Patients With (.*)",
+                    "\\1",
+                    Label)
+  ) %>% 
+  select(
+    -c(q_nums, Label)
+  ) %>%
+  filter(
+    !is.na(q_vals)
+  ) %>% 
+  group_by(
+    question,
+    Stage,
+    AP
+  ) %>% 
+  summarise(
+    N = n(),
+    Mean = round(mean(q_vals, na.rm = TRUE),
+                 2),
+    SD = round(sd(q_vals, na.rm = TRUE),
+               2)
+  ) %>% 
+  mutate(
+    Stats = paste(Mean,
+                  " (",
+                  SD,
+                  ", N = ",
+                  N,
+                  ")",
+                  sep = "")
+  ) %>% 
+  select(
+    -c(N, Mean, SD)
+  ) %>% 
+  pivot_wider(
+    names_from = AP,
+    values_from = Stats
+  ) %>%
+  arrange(
+    question,
+    desc(Stage)
+  ) %>%
+  ungroup() %>% 
+  knitr::kable()
+
+```
 
 
 # Package Citations
